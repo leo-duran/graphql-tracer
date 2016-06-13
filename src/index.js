@@ -1,1 +1,1 @@
-export { Tracer, decorateWithTracer, addTracingToResolvers } from './Tracer';
+export { Tracer } from './Tracer';

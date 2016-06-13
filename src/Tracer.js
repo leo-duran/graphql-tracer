@@ -3,7 +3,8 @@ import uuid from 'node-uuid';
 import request from 'request';
 import { forEachField } from 'graphql-tools';
 
-const TRACER_INGRESS_URL = 'https://nim-test-ingress.appspot.com';
+const TRACER_INGRESS_URL = process.env.TRACER_INGRESS_URL ||
+      'https://nim-test-ingress.appspot.com';
 
 class Tracer {
   // TODO make sure Tracer can NEVER crash the server.
@@ -43,7 +44,6 @@ class Tracer {
         console.error('Error trying to report to tracer backend:', err.message);
         return;
       }
-      // console.log('status', response.statusCode);
     });
   }
 
@@ -57,8 +57,6 @@ class Tracer {
     const log = (type, data = null) => {
       const id = idCounter++;
       const timestamp = now();
-      // const timestamp = (new Date()).getTime();
-      // console.log(timestamp, type, id, data);
       events.push({ id, timestamp, type, data });
       return id;
     };
@@ -86,111 +84,6 @@ class Tracer {
       submit,
     };
   }
-
-  /* log(type, data = null) {
-    // TODO ensure props is a valid props thingy
-    // TODO ensure info is a valid info thingy
-    // TODO ensure type is a valid type thingy
-    const id = this.idCounter++;
-    const timestamp = now();
-    // const timestamp = (new Date()).getTime();
-    console.log(timestamp, type, id, data);
-    this.events.push({ id, timestamp, type, data });
-    return id;
-  }
-
-  report() {
-    return {
-      queryId: this.queryId,
-      startTime: this.startTime,
-      startHrTime: this.startHrTime,
-      events: this.events,
-    };
-  } */
 }
 
-function decorateWithTracer(fn, info) {
-  return (p, a, ctx, i) => {
-    const startEventId = ctx.tracer.log('resolver.start', info);
-    let result;
-    try {
-      result = fn(p, a, ctx, i);
-    } catch (e) {
-      // console.log('yeah, it errored directly');
-      ctx.tracer.log('resolver.end', {
-        ...info,
-        resolverError: {
-          message: e.message,
-          stack: e.stack,
-        },
-        startEventId,
-      });
-      throw e;
-    }
-
-    try {
-      if (result === null) {
-        ctx.tracer.log('resolver.end', { ...info, returnedNull: true, startEventId });
-        return result;
-      }
-      if (typeof result === 'undefined') {
-        ctx.tracer.log('resolver.end', { ...info, returnedUndefined: true, startEventId });
-        return result;
-      }
-      if (typeof result.then === 'function') {
-        result.then((res) => {
-          ctx.tracer.log('resolver.end', { ...info, startEventId });
-          return res;
-        })
-        .catch((err) => {
-          // console.log('whoa, it threw an error!');
-          ctx.tracer.log('resolver.end', { ...info, startEventId });
-          throw err;
-        });
-      } else {
-        // console.log('did not return a promise. logging now');
-        ctx.tracer.log('resolver.end', { ...info, startEventId });
-      }
-      return result;
-    } catch (e) {
-      // XXX this should basically never happen
-      // if it does happen, we want to be able to collect these events.
-      ctx.tracer.log('tracer.error', {
-        ...info,
-        result,
-        tracerError: {
-          message: e.message,
-          stack: e.stack,
-        },
-        startEventId,
-      });
-      ctx.tracer.log('resolver.end', { ...info, startEventId });
-      return result;
-    }
-  };
-}
-
-// This function modifies the schema in place to add tracing around all resolve functions
-function addTracingToResolvers(schema) {
-  // XXX this is a hacky way of making sure that the schema only gets decorated
-  // with tracer once.
-  if (schema._apolloTracerApplied) {
-    // console.log('Tracing already added to resolve functions. Not adding again.');
-    return;
-  }
-  // eslint-disable-next-line no-param-reassign
-  schema._apolloTracerApplied = true;
-
-  forEachField(schema, (field, typeName, fieldName) => {
-    const functionName = `${typeName}.${fieldName}`;
-    if (field.resolve) {
-      // eslint-disable-next-line no-param-reassign
-      field.resolve = decorateWithTracer(
-        field.resolve,
-        { type: 'resolve', functionName },
-      );
-    }
-  });
-}
-
-export { Tracer, decorateWithTracer, addTracingToResolvers };
+export { Tracer };
