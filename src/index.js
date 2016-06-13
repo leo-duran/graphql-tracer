@@ -1,1 +1,1 @@
-export { Tracer } from './Tracer';
+export { Tracer, INTERVAL } from './Tracer';

@@ -3,6 +3,16 @@ import uuid from 'node-uuid';
 import request from 'request';
 import { forEachField } from 'graphql-tools';
 
+// enum for event types:
+//  - tick   -  an individual event
+//  - start  -  the starting point of some event interval
+//  - end    -  the end point of the event
+const INTERVAL = {
+  TICK: 0,
+  START: 1,
+  END: 2,
+};
+
 const TRACER_INGRESS_URL = process.env.TRACER_INGRESS_URL ||
       'https://nim-test-ingress.appspot.com';
 
@@ -24,9 +34,35 @@ class Tracer {
   }
 
   sendReport(report) {
-    let filteredEvents = report.events;
+    // so far collected a bunch of events that look like:
+    //     { id, data, ..., eventType: tick|start|end }
+    // group the corresponding start and end events
+
+    const groupedEvents = [];
+    const groupedEventById = {};
+    report.events.forEach(event => {
+      const groupedEvent = {
+        query_id: event.queryId,
+        start: event.timestamp,
+        end: event.timestamp,
+        resolver_name: event.resolverName,
+        payload: event.data
+      };
+
+      if (event.eventType === INTERVAL.TICK) {
+        groupedEvents.push(groupedEvent);
+      } else if (event.eventType === INTERVAL.START) {
+        groupedEvents.push(groupedEvent);
+        groupedEventById[event.id] = groupedEvent;
+      } else if (event.eventType === INTERVAL.END) {
+        const startEvent = groupedEventById[event.id];
+        startEvent.end = event.timestamp;
+      }
+    });
+
+    let filteredEvents = groupedEvents;
     if (this.reportFilterFn) {
-      filteredEvents = report.events.filter(this.reportFilterFn);
+      filteredEvents = groupedEvents.filter(this.reportFilterFn);
     }
     const options = {
       url: TRACER_INGRESS_URL,
@@ -54,10 +90,22 @@ class Tracer {
     const startTime = (new Date()).getTime();
     const startHrTime = now();
 
-    const log = (type, data = null) => {
-      const id = idCounter++;
+    // the idea is to automatically generate id's for the events
+    // but in case it is an event that has a starting and an ending points
+    // the caller should be able to take the id and pass it in saying
+    // "this is the end point of the event with that id"
+    const log = (
+      type,
+      resolverName = null,
+      data = null,
+      eventType = INTERVAL.TICK,
+      id = null
+    ) => {
+      if (id === null) {
+        id = idCounter++;
+      }
       const timestamp = now();
-      events.push({ id, timestamp, type, data });
+      events.push({ id, timestamp, resolverName, type, data, eventType });
       return id;
     };
 
@@ -86,4 +134,4 @@ class Tracer {
   }
 }
 
-export { Tracer };
+export { Tracer, INTERVAL };
