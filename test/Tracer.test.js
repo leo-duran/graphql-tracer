@@ -1,7 +1,7 @@
-import { makeExecutableSchema, addTracingToResolvers } from 'graphql-tools';
+import { makeExecutableSchema } from 'graphql-tools';
 import { expect } from 'chai';
 import { graphql } from 'graphql';
-import { Tracer, decorateWithTracer } from '../src/Tracer.js';
+import { Tracer } from '../src/Tracer.js';
 
 const request = require('request'); // just to override it
 
@@ -48,7 +48,6 @@ describe('Tracer', () => {
     resolvers: resolver,
     allowUndefinedInResolve: true,
   });
-  addTracingToResolvers(jsSchema);
 
   it('throws an error if you construct it without valid TRACER_APP_KEY', () => {
     expect(() => {
@@ -127,9 +126,6 @@ describe('Tracer', () => {
     });
   });
   it('does not add tracing to schema if already added', () => {
-    // same test as previous, just calling addTracingToResolvers again
-    // and making sure we still log the expected number of events
-    addTracingToResolvers(jsSchema);
     const tracer = t1.newLoggerInstance();
     const testQuery = `{
       returnPromiseErr
