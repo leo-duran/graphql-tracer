@@ -301,7 +301,7 @@ describe('Tracer', () => {
   });
 
 
-  it.only('does not include proxy in request if excluded', () => {
+  it('does not include proxy in request if excluded', () => {
     const t2 = new Tracer({
       TRACER_APP_KEY: 'BDE05C83-E58F-4837-8D9A-9FB5EA605D2A',
     });
