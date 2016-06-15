@@ -9,7 +9,7 @@ class Tracer {
   // TODO make sure Tracer can NEVER crash the server.
   // maybe wrap everything in try/catch, but need to test that.
 
-  constructor({ TRACER_APP_KEY, sendReports = true, reportFilterFn }) {
+  constructor({ TRACER_APP_KEY, sendReports = true, reportFilterFn, proxy }) {
     if (!TRACER_APP_KEY || TRACER_APP_KEY.length < 36) {
       throw new Error('Tracer requires a well-formatted TRACER_APP_KEY');
     }
@@ -20,6 +20,7 @@ class Tracer {
     this.startHrTime = now();
     this.sendReports = sendReports;
     this.reportFilterFn = reportFilterFn;
+    this.proxy = proxy;
   }
 
   sendReport(report) {
@@ -29,6 +30,7 @@ class Tracer {
     }
     const options = {
       url: TRACER_INGRESS_URL,
+      proxy: this.proxy,
       method: 'PUT',
       headers: {
         'user-agent': `apollo tracer v${report.tracerApiVersion}`,
