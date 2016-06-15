@@ -1,7 +1,7 @@
-import { makeExecutableSchema, addTracingToResolvers } from 'graphql-tools';
+import { makeExecutableSchema } from 'graphql-tools';
 import { expect } from 'chai';
 import { graphql } from 'graphql';
-import { Tracer, decorateWithTracer } from '../src/Tracer.js';
+import { Tracer, decorateWithTracer, addTracingToResolvers } from '../src/Tracer.js';
 
 const request = require('request'); // just to override it
 
