@@ -1,7 +1,6 @@
 import now from 'performance-now';
 import uuid from 'node-uuid';
 import request from 'request';
-import { forEachField } from 'graphql-tools';
 
 // enum for event types:
 //  - tick   -  an individual event
