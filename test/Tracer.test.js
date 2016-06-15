@@ -278,5 +278,49 @@ describe('Tracer', () => {
     expect(interceptedMsg[1]).to.equal('nope');
   });
 
+  it('includes proxy in request if you tell it to', () => {
+    const t2 = new Tracer({
+      TRACER_APP_KEY: 'BDE05C83-E58F-4837-8D9A-9FB5EA605D2A',
+      proxy: 'myproxy.co',
+    });
+    let interceptedReport = null;
+    // test harness for submit
+    const realRequest = request.Request;
+    request.Request = (params) => {
+      interceptedReport = params;
+    };
+    const tracer = t2.newLoggerInstance();
+    const testQuery = `{
+      returnPromiseErr
+    }`;
+    return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
+      tracer.submit();
+      request.Request = realRequest;
+      expect(interceptedReport.proxy).to.equal('myproxy.co');
+    });
+  });
+
+
+  it('does not include proxy in request if excluded', () => {
+    const t2 = new Tracer({
+      TRACER_APP_KEY: 'BDE05C83-E58F-4837-8D9A-9FB5EA605D2A',
+    });
+    let interceptedReport = null;
+    // test harness for submit
+    const realRequest = request.Request;
+    request.Request = (params) => {
+      interceptedReport = params;
+    };
+    const tracer = t2.newLoggerInstance();
+    const testQuery = `{
+      returnPromiseErr
+    }`;
+    return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
+      tracer.submit();
+      request.Request = realRequest;
+      expect(interceptedReport.proxy).to.equal(undefined);
+    });
+  });
+
   // TODO test calling sendReport with non-json
 });
