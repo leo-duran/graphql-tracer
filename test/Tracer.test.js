@@ -61,9 +61,9 @@ describe('Tracer', () => {
       returnArg(name: "it")
     }`;
     const tracer = t1.newLoggerInstance();
-    return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
+    return graphql(jsSchema, testQuery, null, { tracer }, null, null, tracer.graphqlLogger).then(() => {
       const report = tracer.report('');
-      expect(report.events.length).to.equal(2);
+      expect(report.events.length).to.equal(4);
     });
   });
 
@@ -72,9 +72,9 @@ describe('Tracer', () => {
     const testQuery = `{
       returnErr
     }`;
-    return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
+    return graphql(jsSchema, testQuery, null, { tracer }, null, null, tracer.graphqlLogger).then(() => {
       const report = tracer.report('');
-      expect(report.events.length).to.equal(2);
+      expect(report.events.length).to.equal(6);
     });
   });
 
@@ -83,9 +83,9 @@ describe('Tracer', () => {
     const testQuery = `{
       returnPromiseArg(name: "it")
     }`;
-    return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
+    return graphql(jsSchema, testQuery, null, { tracer }, null, null, tracer.graphqlLogger).then(() => {
       const report = tracer.report('');
-      expect(report.events.length).to.equal(2);
+      expect(report.events.length).to.equal(4);
     });
   });
 
@@ -94,9 +94,9 @@ describe('Tracer', () => {
     const testQuery = `{
       returnPromiseErr
     }`;
-    return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
+    return graphql(jsSchema, testQuery, null, { tracer }, null, null, tracer.graphqlLogger).then(() => {
       const report = tracer.report('');
-      expect(report.events.length).to.equal(2);
+      expect(report.events.length).to.equal(6);
     });
   });
   it('does not throw an error if the resolve function returns undefined', () => {
@@ -104,10 +104,9 @@ describe('Tracer', () => {
     const testQuery = `{
       returnUndefined
     }`;
-    return graphql(jsSchema, testQuery, null, { tracer }).then((res) => {
+    return graphql(jsSchema, testQuery, null, { tracer }, null, null, tracer.graphqlLogger).then((res) => {
       const report = tracer.report('');
-      expect(report.events.length).to.equal(2);
-      expect(report.events[1].data.returnedUndefined).to.equal(true);
+      expect(report.events.length).to.equal(4);
       expect(res.data.returnUndefined).to.equal(null);
       expect(res.errors).to.equal(undefined);
     });
@@ -117,10 +116,9 @@ describe('Tracer', () => {
     const testQuery = `{
       returnNull
     }`;
-    return graphql(jsSchema, testQuery, null, { tracer }).then((res) => {
+    return graphql(jsSchema, testQuery, null, { tracer }, null, null, tracer.graphqlLogger).then((res) => {
       const report = tracer.report('');
-      expect(report.events.length).to.equal(2);
-      expect(report.events[1].data.returnedNull).to.equal(true);
+      expect(report.events.length).to.equal(4);
       expect(res.data.returnNull).to.equal(null);
       expect(res.errors).to.equal(undefined);
     });
@@ -130,38 +128,11 @@ describe('Tracer', () => {
     const testQuery = `{
       returnPromiseErr
     }`;
-    return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
+    return graphql(jsSchema, testQuery, null, { tracer }, null, null, tracer.graphqlLogger).then(() => {
       const report = tracer.report('');
-      expect(report.events.length).to.equal(2);
+      expect(report.events.length).to.equal(6);
     });
   });
-
-  // decorateWithTracer tests
-  it('reports a returnedNull when resolver returns null', () => {
-    const fn = () => null;
-    const decorated = decorateWithTracer(fn, { functionName: 'Test.test' });
-    const tracer = t1.newLoggerInstance();
-    decorated(null, null, { tracer });
-    expect(tracer.report().events[1].data.returnedNull).to.equal(true);
-  });
-
-  it('reports a returnedUndefined when resolver returns null', () => {
-    const fn = () => undefined;
-    const decorated = decorateWithTracer(fn, { functionName: 'Test.test' });
-    const tracer = t1.newLoggerInstance();
-    decorated(null, null, { tracer });
-    expect(tracer.report().events[1].data.returnedUndefined).to.equal(true);
-  });
-
-  it('reports a tracer.error when tracer decorator makes a boo boo', () => {
-    const fn = () => { return { then() { throw new Error('boo boo'); } }; };
-    const decorated = decorateWithTracer(fn, { functionName: 'Test.test' });
-    const tracer = t1.newLoggerInstance();
-    decorated(null, null, { tracer });
-    expect(tracer.report().events[1].type).to.equal('tracer.error');
-    expect(tracer.report().events[1].data.tracerError.message).to.equal('boo boo');
-  });
-
 
   // send report tests
   it('calls sendReport with the right arguments', () => {
@@ -173,7 +144,7 @@ describe('Tracer', () => {
     const testQuery = `{
       returnPromiseErr
     }`;
-    return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
+    return graphql(jsSchema, testQuery, null, { tracer }, null, null, tracer.graphqlLogger).then(() => {
       tracer.submit();
       const expected = [
         'TRACER_APP_KEY',
@@ -184,7 +155,7 @@ describe('Tracer', () => {
         'tracerApiVersion',
       ];
       expect(Object.keys(interceptedReport).sort()).to.deep.equal(expected);
-      expect(interceptedReport.events.length).to.equal(2);
+      expect(interceptedReport.events.length).to.equal(6);
     });
   });
 
@@ -199,7 +170,7 @@ describe('Tracer', () => {
     const testQuery = `{
       returnPromiseErr
     }`;
-    return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
+    return graphql(jsSchema, testQuery, null, { tracer }, null, null, tracer.graphqlLogger).then(() => {
       tracer.submit();
       const expected = [
         'TRACER_APP_KEY',
@@ -211,14 +182,14 @@ describe('Tracer', () => {
       ];
       request.Request = realRequest;
       expect(Object.keys(interceptedReport).sort()).to.deep.equal(expected);
-      expect(interceptedReport.events.length).to.equal(2);
+      expect(interceptedReport.events.length).to.equal(6);
     });
   });
 
   it('filters events in sendReport if you tell it to', () => {
     const t2 = new Tracer({
       TRACER_APP_KEY: 'BDE05C83-E58F-4837-8D9A-9FB5EA605D2A',
-      reportFilterFn: (e) => (e.type !== 'resolver.end'),
+      reportFilterFn: (e) => (e.type !== 'resolver.end' && e.type !== 'subtree.end'),
     });
     let interceptedReport = null;
     // test harness for submit
@@ -230,10 +201,10 @@ describe('Tracer', () => {
     const testQuery = `{
       returnPromiseErr
     }`;
-    return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
+    return graphql(jsSchema, testQuery, null, { tracer }, null, null, tracer.graphqlLogger).then(() => {
       tracer.submit();
       request.Request = realRequest;
-      expect(interceptedReport.events.length).to.equal(1);
+      expect(interceptedReport.events.length).to.equal(4);
       expect(interceptedReport.events[0].type).to.equal('resolver.start');
     });
   });

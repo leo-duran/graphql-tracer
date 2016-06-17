@@ -77,10 +77,34 @@ class Tracer {
       }
     };
 
+    const startEventIdMapping = {};
+    const graphqlLogger = (tag, payload, info) => {
+      // XXX the graphql logger tags are capitalized words separated
+      // with underscores
+      tag = tag.toLowerCase().replace(/_/g, '.');
+      const tagParts = tag.split('.');
+      const lastTagPart = tagParts[tagParts.length - 1];
+
+      // since the interface of graphql logging doesn't correlate
+      // start and end events, we need to do it ourselves using path
+      if (lastTagPart === 'start') {
+        const id = log(tag, payload);
+        startEventIdMapping[JSON.stringify([tag, payload.path])] = id;
+      } else if (lastTagPart === 'end') {
+        const key = JSON.stringify([tag.replace(/\.end$/, '.start'), payload.path]);
+        const startEventId = startEventIdMapping[key];
+        delete startEventIdMapping[key];
+        log(tag, Object.assign({}, payload, { startEventId }));
+      } else {
+        log(tag, payload);
+      }
+    };
+
     return {
       log,
       report,
       submit,
+      graphqlLogger,
     };
   }
 }
