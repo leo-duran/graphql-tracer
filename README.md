@@ -45,3 +45,32 @@ app.use('/graphql', (req, res) => {
 
 app.listen(3000);
 ```
+
+## Custom event logging
+
+To log a custom event from a resolver function, use the `tracer` object attached
+to the context.
+
+```javascript
+const resolvers = {
+  Entry: {
+    repository({ repository_name }, _, context, info) {
+      // log the beginning of the call out
+      const startId = context.tracer.log('githubapicall.start', { path: info.path });
+
+      const repo = context.github.getByFullName(repository_name);
+
+      // log the end of the call out
+      // pass the id of the start log so tracer can associate two event
+      context.tracer.log('githubapicall.end', { path: info.path }, startId);
+
+      return repo;
+    },
+    // ...
+  },
+};
+```
+
+One can log an interval with a convention of tagging the events with `.start`
+and `.end` suffix. To make it easier to associate many start and end events,
+you can pass the third argument `startEventId` (as shown in the example).
