@@ -53,10 +53,20 @@ class Tracer {
     const startTime = (new Date()).getTime();
     const startHrTime = now();
 
-    const log = (type, data = null) => {
+    const log = (type, data = null, startEventId = null) => {
       const id = idCounter++;
       const timestamp = now();
-      events.push({ id, timestamp, type, data });
+
+      const extData = startEventId ?
+                      Object.assign({}, data, { startEventId }) : data;
+
+      events.push({
+        id,
+        timestamp,
+        type,
+        data: extData
+      });
+
       return id;
     };
 
