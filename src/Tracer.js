@@ -99,9 +99,12 @@ class Tracer {
       // start and end events, we need to do it ourselves using path
       if (lastTagPart === 'start') {
         const id = log(tag, payload);
-        startEventIdMapping[JSON.stringify([tag, payload.path])] = id;
+        const key = payload && payload.path ?
+                    JSON.stringify([tag, payload.path]) : tag;
+        startEventIdMapping[key] = id;
       } else if (lastTagPart === 'end') {
-        const key = JSON.stringify([tag.replace(/\.end$/, '.start'), payload.path]);
+        const key = payload && payload.path ?
+                    JSON.stringify([tag.replace(/\.end$/, '.start'), payload.path]) : tag;
         const startEventId = startEventIdMapping[key];
         delete startEventIdMapping[key];
         log(tag, Object.assign({}, payload, { startEventId }));
