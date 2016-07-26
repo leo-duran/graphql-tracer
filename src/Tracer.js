@@ -112,7 +112,7 @@ class Tracer {
 }
 
 function decorateWithTracer(fn, info) {
-  return (p, a, ctx, i) => {
+  const decoratedResolver = (p, a, ctx, i) => {
     const startEventId = ctx.tracer.log('resolver.start', info);
     let result;
     try {
@@ -170,6 +170,12 @@ function decorateWithTracer(fn, info) {
       return result;
     }
   };
+
+  // Add .$proxy to support graphql-sequelize.
+  // See: https://github.com/mickhansen/graphql-sequelize/blob/edd4266bd55828157240fe5fe4d4381e76f041f8/src/generateIncludes.js#L37-L41
+  decoratedResolver.$proxy = fn;
+
+  return decoratedResolver;
 }
 
 // This function modifies the schema in place to add tracing around all resolve functions
