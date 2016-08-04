@@ -2,6 +2,7 @@ import now from 'performance-now';
 import uuid from 'node-uuid';
 import request from 'request';
 import { forEachField, addSchemaLevelResolveFunction } from 'graphql-tools';
+import { print } from 'graphql/language';
 
 const TRACER_INGRESS_URL = 'https://nim-test-ingress.appspot.com';
 
