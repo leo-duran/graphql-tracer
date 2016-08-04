@@ -1,1 +1,6 @@
-export { Tracer, decorateWithTracer, addTracingToResolvers } from './Tracer';
+export {
+  Tracer,
+  decorateWithTracer,
+  addTracingToResolvers,
+  instrumentSchemaForExpressGraphQL,
+} from './Tracer';

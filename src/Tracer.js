@@ -1,7 +1,7 @@
 import now from 'performance-now';
 import uuid from 'node-uuid';
 import request from 'request';
-import { forEachField } from 'graphql-tools';
+import { forEachField, addSchemaLevelResolveFunction } from 'graphql-tools';
 
 const TRACER_INGRESS_URL = 'https://nim-test-ingress.appspot.com';
 
@@ -201,4 +201,17 @@ function addTracingToResolvers(schema) {
   });
 }
 
-export { Tracer, decorateWithTracer, addTracingToResolvers };
+// This instruments a GraphQL.js schema when using tracer with express-graphql
+function instrumentSchemaForExpressGraphQL(schema) {
+  addTracingToResolvers(schema);
+  addSchemaLevelResolveFunction(schema, (root, args, ctx, info) => {
+    ctx.tracer.log('request.query', print(info.operation));
+    ctx.tracer.log('request.variables', info.variableValues);
+    ctx.tracer.log('request.operationName', info.operation.name);
+    ctx.tracer.log('request.context', ctx);
+    ctx.tracer.log('request.rootValue', info.rootValue);
+    return root;
+  });
+}
+
+export { Tracer, decorateWithTracer, addTracingToResolvers, instrumentSchemaForExpressGraphQL };
