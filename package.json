@@ -1,6 +1,6 @@
 {
   "name": "graphql-tracer",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "Trace collection library for Node.js GraphQL servers",
   "main": "dist/index.js",
   "directories": {
