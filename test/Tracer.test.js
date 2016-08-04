@@ -242,6 +242,29 @@ describe('Tracer', () => {
     });
   });
 
+  it('maps events in sendReport if you tell it to', () => {
+    const t2 = new Tracer({
+      TRACER_APP_KEY: 'BDE05C83-E58F-4837-8D9A-9FB5EA605D2A',
+      // eslint-disable-next-line no-param-reassign
+      reportMapFn: (e) => { e.type = 'uga'; return e; },
+    });
+    let interceptedReport = null;
+    // test harness for submit
+    const realRequest = request.Request;
+    request.Request = (params) => {
+      interceptedReport = params.json;
+    };
+    const tracer = t2.newLoggerInstance();
+    const testQuery = `{
+      returnPromiseErr
+    }`;
+    return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
+      tracer.submit();
+      request.Request = realRequest;
+      expect(interceptedReport.events.length).to.equal(2);
+      expect(interceptedReport.events[0].type).to.equal('uga');
+    });
+  });
 
   it('does not send report if sendReports is false', () => {
     const t2 = new Tracer({

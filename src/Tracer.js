@@ -10,7 +10,7 @@ class Tracer {
   // TODO make sure Tracer can NEVER crash the server.
   // maybe wrap everything in try/catch, but need to test that.
 
-  constructor({ TRACER_APP_KEY, sendReports = true, reportFilterFn, proxy }) {
+  constructor({ TRACER_APP_KEY, sendReports = true, reportFilterFn, reportMapFn, proxy }) {
     if (!TRACER_APP_KEY || TRACER_APP_KEY.length < 36) {
       throw new Error('Tracer requires a well-formatted TRACER_APP_KEY');
     }
@@ -21,6 +21,7 @@ class Tracer {
     this.startHrTime = now();
     this.sendReports = sendReports;
     this.reportFilterFn = reportFilterFn;
+    this.reportMapFn = reportMapFn;
     this.proxy = proxy;
   }
 
@@ -28,6 +29,9 @@ class Tracer {
     let filteredEvents = report.events;
     if (this.reportFilterFn) {
       filteredEvents = report.events.filter(this.reportFilterFn);
+    }
+    if (this.reportMapFn) {
+      filteredEvents = report.events.map(this.reportMapFn);
     }
     const options = {
       url: TRACER_INGRESS_URL,
