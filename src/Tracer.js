@@ -11,7 +11,7 @@ class Tracer {
   // maybe wrap everything in try/catch, but need to test that.
 
   constructor({ TRACER_APP_KEY, sendReports = true, reportFilterFn, reportMapFn, proxy }) {
-    if (!TRACER_APP_KEY || TRACER_APP_KEY.length < 36) {
+    if (!TRACER_APP_KEY || TRACER_APP_KEY.length !== 36) {
       throw new Error('Tracer requires a well-formatted TRACER_APP_KEY');
     }
     // TODO check that sendReports is a boolean
