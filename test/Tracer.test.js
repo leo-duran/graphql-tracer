@@ -1,7 +1,12 @@
 import { makeExecutableSchema } from 'graphql-tools';
 import { expect } from 'chai';
 import { graphql } from 'graphql';
-import { Tracer, decorateWithTracer, addTracingToResolvers } from '../src/Tracer.js';
+import {
+  Tracer,
+  decorateWithTracer,
+  addTracingToResolvers,
+  instrumentSchemaForExpressGraphQL,
+} from '../src/Tracer.js';
 
 const request = require('request'); // just to override it
 
@@ -48,7 +53,7 @@ describe('Tracer', () => {
     resolvers: resolver,
     allowUndefinedInResolve: true,
   });
-  addTracingToResolvers(jsSchema);
+  instrumentSchemaForExpressGraphQL(jsSchema);
 
   it('throws an error if you construct it without valid TRACER_APP_KEY', () => {
     expect(() => {
@@ -64,7 +69,7 @@ describe('Tracer', () => {
     const tracer = t1.newLoggerInstance();
     return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
       const report = tracer.report('');
-      expect(report.events.length).to.equal(2);
+      expect(report.events.length).to.equal(5);
     });
   });
 
@@ -75,7 +80,7 @@ describe('Tracer', () => {
     }`;
     return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
       const report = tracer.report('');
-      expect(report.events.length).to.equal(2);
+      expect(report.events.length).to.equal(5);
     });
   });
 
@@ -86,7 +91,7 @@ describe('Tracer', () => {
     }`;
     return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
       const report = tracer.report('');
-      expect(report.events.length).to.equal(2);
+      expect(report.events.length).to.equal(5);
     });
   });
 
@@ -97,7 +102,7 @@ describe('Tracer', () => {
     }`;
     return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
       const report = tracer.report('');
-      expect(report.events.length).to.equal(2);
+      expect(report.events.length).to.equal(5);
     });
   });
   it('does not throw an error if the resolve function returns undefined', () => {
@@ -107,8 +112,8 @@ describe('Tracer', () => {
     }`;
     return graphql(jsSchema, testQuery, null, { tracer }).then((res) => {
       const report = tracer.report('');
-      expect(report.events.length).to.equal(2);
-      expect(report.events[1].data.returnedUndefined).to.equal(true);
+      expect(report.events.length).to.equal(5);
+      expect(report.events[4].data.returnedUndefined).to.equal(true);
       expect(res.data.returnUndefined).to.equal(null);
       expect(res.errors).to.equal(undefined);
     });
@@ -120,8 +125,8 @@ describe('Tracer', () => {
     }`;
     return graphql(jsSchema, testQuery, null, { tracer }).then((res) => {
       const report = tracer.report('');
-      expect(report.events.length).to.equal(2);
-      expect(report.events[1].data.returnedNull).to.equal(true);
+      expect(report.events.length).to.equal(5);
+      expect(report.events[4].data.returnedNull).to.equal(true);
       expect(res.data.returnNull).to.equal(null);
       expect(res.errors).to.equal(undefined);
     });
@@ -136,7 +141,7 @@ describe('Tracer', () => {
     }`;
     return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
       const report = tracer.report('');
-      expect(report.events.length).to.equal(2);
+      expect(report.events.length).to.equal(5);
     });
   });
 
@@ -188,7 +193,7 @@ describe('Tracer', () => {
         'tracerApiVersion',
       ];
       expect(Object.keys(interceptedReport).sort()).to.deep.equal(expected);
-      expect(interceptedReport.events.length).to.equal(2);
+      expect(interceptedReport.events.length).to.equal(5);
     });
   });
 
@@ -197,7 +202,7 @@ describe('Tracer', () => {
     // test harness for submit
     const realRequest = request.Request;
     request.Request = (params) => {
-      interceptedReport = params.json;
+      interceptedReport = JSON.parse(params.body);
     };
     const tracer = t1.newLoggerInstance();
     const testQuery = `{
@@ -215,7 +220,7 @@ describe('Tracer', () => {
       ];
       request.Request = realRequest;
       expect(Object.keys(interceptedReport).sort()).to.deep.equal(expected);
-      expect(interceptedReport.events.length).to.equal(2);
+      expect(interceptedReport.events.length).to.equal(5);
     });
   });
 
@@ -228,7 +233,7 @@ describe('Tracer', () => {
     // test harness for submit
     const realRequest = request.Request;
     request.Request = (params) => {
-      interceptedReport = params.json;
+      interceptedReport = JSON.parse(params.body);
     };
     const tracer = t2.newLoggerInstance();
     const testQuery = `{
@@ -237,8 +242,8 @@ describe('Tracer', () => {
     return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
       tracer.submit();
       request.Request = realRequest;
-      expect(interceptedReport.events.length).to.equal(1);
-      expect(interceptedReport.events[0].type).to.equal('resolver.start');
+      expect(interceptedReport.events.length).to.equal(4);
+      expect(interceptedReport.events[3].type).to.equal('resolver.start');
     });
   });
 
@@ -252,7 +257,7 @@ describe('Tracer', () => {
     // test harness for submit
     const realRequest = request.Request;
     request.Request = (params) => {
-      interceptedReport = params.json;
+      interceptedReport = JSON.parse(params.body);
     };
     const tracer = t2.newLoggerInstance();
     const testQuery = `{
@@ -261,7 +266,7 @@ describe('Tracer', () => {
     return graphql(jsSchema, testQuery, null, { tracer }).then(() => {
       tracer.submit();
       request.Request = realRequest;
-      expect(interceptedReport.events.length).to.equal(2);
+      expect(interceptedReport.events.length).to.equal(5);
       expect(interceptedReport.events[0].type).to.equal('uga');
     });
   });
@@ -345,5 +350,55 @@ describe('Tracer', () => {
     });
   });
 
+  it('properly reports the operation or query', () => {
+    const tracer = t1.newLoggerInstance();
+    const testQuery = `{
+      returnUndefined
+    }`;
+    return graphql(jsSchema, testQuery, null, { tracer }).then((res) => {
+      tracer.submit();
+      const report = tracer.report('');
+      expect(report.events.length).to.equal(5);
+      expect(report.events[0].type).to.equals('request.query');
+      expect(report.events[0].data).to.equals(`{\n  returnUndefined\n}\n`);
+      expect(res.errors).to.equal(undefined);
+    });
+  });
+
+  it('properly reports the operation or query with fragments', () => {
+    const tracer = t1.newLoggerInstance();
+    const testQuery = `{
+      returnUndefined
+      ...F1
+    }
+
+    fragment F1 on RootQuery {
+      returnNull
+    }
+    `;
+    return graphql(jsSchema, testQuery, null, { tracer }).then((res) => {
+      const report = tracer.report('');
+      expect(report.events.length).to.equal(7);
+      expect(report.events[0].type).to.equals('request.query');
+      expect(report.events[0].data).to.equals(`{\n  returnUndefined\n  ...F1\n}\nfragment F1 on RootQuery {\n  returnNull\n}`);
+      expect(res.errors).to.equal(undefined);
+    });
+  });
   // TODO test calling sendReport with non-json
+  it('prints an error if report is not serializable', () => {
+    const tracer = t1.newLoggerInstance();
+    const a = {};
+    const b = { a };
+    a['b'] = b;
+    tracer.log('test.test', a);
+    const realConsoleError = console.error;
+    const caughtErrors = [];
+    console.error = msg => { caughtErrors.push(msg); };
+    tracer.submit();
+    expect(caughtErrors).to.deep.equals([
+      'Cannot serialize tracer report',
+      'Converting circular structure to JSON',
+    ]);
+    console.error = realConsoleError;
+  });
 });
