@@ -34,7 +34,7 @@
     "request": "^2.72.0"
   },
   "peerDependencies": {
-    "graphql-tools": "^0.6.0"
+    "graphql-tools": "^0.6.3"
   },
   "devDependencies": {
     "babel-cli": "^6.6.5",
