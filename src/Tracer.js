@@ -33,6 +33,15 @@ class Tracer {
     if (this.reportMapFn) {
       filteredEvents = report.events.map(this.reportMapFn);
     }
+    let body = '';
+    try {
+      body = JSON.stringify({ ...report, events: filteredEvents });
+    } catch (e) {
+      console.error('Cannot serialize tracer report');
+      console.error(e.message);
+      return;
+    }
+
     const options = {
       url: TRACER_INGRESS_URL,
       proxy: this.proxy,
@@ -40,10 +49,7 @@ class Tracer {
       headers: {
         'user-agent': `apollo tracer v${report.tracerApiVersion}`,
       },
-      json: {
-        ...report,
-        events: filteredEvents,
-      },
+      body,
     };
     request(options, (err) => {
       if (err) {
@@ -210,11 +216,12 @@ function addTracingToResolvers(schema) {
 function instrumentSchemaForExpressGraphQL(schema) {
   addTracingToResolvers(schema);
   addSchemaLevelResolveFunction(schema, (root, args, ctx, info) => {
-    ctx.tracer.log('request.query', print(info.operation));
+    const operation = print(info.operation);
+    const fragments = Object.keys(info.fragments).map(k => print(info.fragments[k])).join('\n');
+
+    ctx.tracer.log('request.query', `${operation}\n${fragments}`);
     ctx.tracer.log('request.variables', info.variableValues);
     ctx.tracer.log('request.operationName', info.operation.name);
-    ctx.tracer.log('request.context', ctx);
-    ctx.tracer.log('request.rootValue', info.rootValue);
     return root;
   });
 }
